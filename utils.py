@@ -1,14 +1,10 @@
 import pandas as pd
-import numpy as np
-import re
 import math
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
+import re
 
-df = pd.read_csv('assets/profile_symptom.csv')
+def bin_age(a): 
+    return f"{(a//10)*10}s"
 
-def bin_age(a): return f"{(a//10)*10}s"
-# ---------- helpers ----------
 def is_nan(x):
     try: return math.isnan(x)  # np.nan, float('nan')
     except: return False
@@ -34,37 +30,41 @@ SYNONYMS = {
                "มีเสมหะน้ำมูกไหล", "คันคอเสมหะไหลลงคอ"],
     "wheeze": ["wheezing", "หายใจมีเสียงวี๊ด"],
     "shortness_of_breath": ["labored breathing", "หายใจหอบเหนื่อย", "เหนื่อย", "หายใจไม่ออก",
-                            "หายใจไม่สะดวก", "breathless onlying", "breathlessonlying"],
+                            "หายใจไม่สะดวก", "breathless onlying", "breathlessonlying", 
+                            "shortnessofbreath", "shortnessofbreathwhenlyingdown"],
     "hoarseness": ["hoarseness", "เสียงแหบ"],
     # ENT – ear
     "ear_pain": ["ear pain", "earpain", "ปวดหู"],
     "ear_discharge": ["ear discharge", "eardischarge", "eardischargeearpain"],
-    "hearing_loss": ["hearing loss", "hearingloss", "หูดับ", "การได้ยินลดลง"],
-    "tinnitus": ["เสียงดังในหู"],
+    "hearing_loss": ["hearing loss", "hearingloss", "หูดับ", "การได้ยินลดลง", "หูอื้อ"],
+    "tinnitus": ["เสียงดังในหู", "เสียงดังรบกวนในหู"],
     # eyes
     "eye_pain": ["eye pain", "eyepain", "ปวดตา", "ปวดลูกตา", "ปวดตาเคืองตา"],
+    "eyelid_twitch": ["ตากระตุก"], 
     "red_eye": ["ตาแดง"],
-    "eye_discharge": ["eye discharge", "eyedischarge", "ขี้ตาเยอะ"],
+    "eye_discharge": ["eye discharge", "eyedischarge", "ขี้ตาเยอะ", "ขี้ตา"],
     "itchy_eyes": ["itchy eyes", "คันตา", "เคืองตา", "eyeirritation"],
     "dry_eyes_skin": ["dry skin", "dryskin", "ตาแห้ง", "ผิวแห้ง"],
     "tearing": ["น้ำตาไหล"],
     "blurred_vision": ["blurry vision", "blurryvision", "ตาพร่ามัว", "ตามองเห็นไม่ชัด",
                        "มองเห็นภาพซ้อน"],
-    "yellow_eyes_skin": ["ตาเหลือง", "yellowishskin"],
+    "yellow_eyes_skin": ["ตาเหลือง", "yellowishskin", "jaundice"],
     # nose/bleeding
+    "nose_pain": ["ปวดจมูก"], 
     "nosebleed": ["เลือดกำเดาไหล", "แน่นจมูกเลือดกำเดาไหล"],
     "sneeze": ["จาม", "จามบ่อย", "sneezing", "itchy nose sneezing", "itchynosesneezing"],
     # mouth
-    "oral_ulcer": ["แผลในช่องปาก", "ฝ้าขาวที่ลิ้น", "มีแผล"],
+    "oral_ulcer": ["แผลในช่องปาก", "ฝ้าขาวที่ลิ้น", "มีแผล", "แผลในปาก"],
     "lip_lesion": ["แผลริมฝีปาก"],
     # systemic / neuro
     "fever": ["ไข้", "fever", "ตัวร้อน", "ไข้คอแดง", "ร้อนวูบวาบไข้"],
     "headache": ["ปวดหัว", "headache", "ปวดขมับ", "headachecough"],
-    "dizziness_lightheaded": ["เวียนศีรษะ", "มึนศีรษะ", "หน้ามืด", "ตาลายหน้ามืด",
+    "dizziness_lightheaded": ["เวียนศีรษะ", "มึนศีรษะ", "หน้ามืด", "ตาลายหน้ามืด","lightheadness",
                               "dizzy", "lightheaded", "dizzyblackout", "swaying", "บ้านหมุน"],
-    "numbness_tremor_weakness": ["ชา", "มือสั่น", "มืออ่อนแรง", "แขนอ่อนแรง"],
-    "fatigue": ["exertionfatique", "ง่วงตลอดเวลา"],
+    "numbness_tremor_weakness": ["ชา", "มือสั่น", "มืออ่อนแรง", "แขนอ่อนแรง","แขนขาอ่อนแรง"],
+    "fatigue": ["exertionfatique", "ง่วงตลอดเวลา", "fatigueassociatedwithexertion", "ง่วงเยอะ"],
     # derm
+    "acne": ["acne"],
     "itch": ["คัน", "itch", "genitalsitching"],
     "rash": ["ผื่น", "skinrash", "มีแผลผื่น"],
     "bruise": ["ฟกช้ำ", "จ้ำเลือด", "จุดเลือดออก"],
@@ -72,29 +72,29 @@ SYNONYMS = {
                   "ก้อนที่หลังหู", "ก้อนที่ขา", "ก้อนที่ศีรษะ", "ก้อนบริเวณใบหน้า",
                   "ก้อนบริเวณขาหนีบ"],
     # GI
-    "abdominal_pain": ["ปวดท้อง", "ปวดบั้นเอว", "ปวดสีข้าง", "ปวดท้องน้อย",
+    "abdominal_pain": ["ปวดท้อง", "ปวดบั้นเอว", "ปวดสีข้าง", "ปวดท้องน้อย", "abdominalpain",
                        "stomachache", "backpain (if abdominal?)", "แสบท้อง", "เรอเปรี้ยว",
                        "เรอเปรี้ยวปวดท้อง", "จุกแน่นท้อง", "จุกแน่นท้องปวดท้อง"],
-    "heartburn": ["แสบท้อง", "เรอเปรี้ยว", "drythroat (GERD?)"],
+    "heartburn": ["แสบท้อง", "เรอเปรี้ยว", "drythroat (GERD?)", "drythroat"],
     "bloating": ["ท้องอืด"],
     "constipation": ["ท้องผูก", "decreased stool caliber", "decreasedstoolcaliber",
-                     "อุจจาระลำเล็กลง"],
+                     "อุจจาระลำเล็กลง", "narrowstool"],
     "diarrhea": ["ท้องเสีย", "ถ่ายเหลว", "diarrhea", "ถ่ายปนเลือด", "ถ่ายเป็นเลือดสด"],
-    "nausea_vomit": ["คลื่นไส้", "อาเจียน", "vomit", "คลื่นไส้อาเจียน", "อาเจียนคลื่นไส้"],
-    "blood_in_stool": ["ถ่ายปนเลือด", "ถ่ายเป็นเลือดสด"],
+    "nausea_vomit": ["คลื่นไส้", "อาเจียน", "vomit", "คลื่นไส้อาเจียน", "อาเจียนคลื่นไส้", "nausea"],
+    "blood_in_stool": ["ถ่ายปนเลือด", "ถ่ายเป็นเลือดสด", "ถ่ายเป็นเลือด"],
     "loss_of_appetite": ["loss of appetite", "lossofappetite"],
-    "weight_loss": ["weight loss stomachache", "weightlossstomachache"],
+    "weight_loss": ["weight loss stomachache", "weightlossstomachache","weightloss"],
     # chest/resp overlap
     "chest_pain": ["เจ็บหน้าอก"],
     # urinary
     "dysuria": ["ปัสสาวะแสบขัด", "เจ็บเวลาปัสสาวะ", "ปัสสาวะเป็นเลือดปัสสาวะแสบขัด"],
-    "hematuria": ["ปัสสาวะเป็นเลือด", "bloodyurine"],
+    "hematuria": ["ปัสสาวะเป็นเลือด", "bloodyurine", "bloodinurine"],
     "frequency_urgency": ["ปัสสาวะบ่อย", "ปัสสาวะไม่สุด", "ปัสสาวะกะปริบกะปรอย",
                           "ปัสสาวะเล็ดราด", "strainingtourinate", "ปัสสาวะเป็นตะกอน", "ปัสสาวะขุ่น"],
     # musculoskeletal
-    "back_pain": ["ปวดหลัง", "backpain"],
+    "back_pain": ["ปวดหลัง", "backpain", "ปวดเอว"],
     "neck_pain": ["ปวดคอ", "ปวดต้นคอ", "neckpain", "ปวดคอปวดหัวไหล่", "ปวดต้นคอปวดบ่า"],
-    "shoulder_pain": ["ปวดบ่า", "ปวดหัวไหล่", "ปวดบ่าปวดหัวไหล่"],
+    "shoulder_pain": ["ปวดบ่า", "ปวดหัวไหล่", "ปวดบ่าปวดหัวไหล่", "ปวดไหล่"],
     "knee_pain": ["ปวดเข่า"],
     "ankle_pain": ["ปวดข้อเท้า", "anklepain"],
     "foot_pain": ["ปวดเท้า", "footpain"],
@@ -103,7 +103,7 @@ SYNONYMS = {
     "rib_pain": ["ปวดซี่โครง"],
     "jaw_pain": ["ปวดกราม"],
     "joint_pain_swelling": ["ปวดข้อ", "jointpain", "บวม", "แขนบวม", "ขาบวม"],
-    "muscle_ache": ["ปวดเมื่อยกล้ามเนื้อทั่วๆ", "ปวดขา", "ปวดแขน", "ปวดน่อง"],
+    "muscle_ache": ["ปวดเมื่อยกล้ามเนื้อทั่วๆ", "ปวดขา", "ปวดแขน", "ปวดน่อง", "ปวดเมื่อยกล้ามเนื้อ"],
     # throat swallowing speaking
     "odynophagia": ["pain on swallowing", "painonswallowing", "จุกแสบลำคอ"],
     "dysphagia": ["difficultyswallowing", "difficultyswallowingSorethroat", "กลืนลำบาก", "กลืนติด"],
@@ -112,13 +112,29 @@ SYNONYMS = {
     # mental health (simple grouping)
     "insomnia": ["นอนไม่หลับ"],
     "anxiety_stress": ["วิตกกังวล", "เครียด", "รู้สึกไร้ค่า"],
-    "self_harm_thoughts": ["คิดฆ่าตัวตาย", "ทำร้ายตัวเอง", "เก็บตัวอยากตาย"],
+    "self_harm_thoughts": ["คิดฆ่าตัวตาย", "ทำร้ายตัวเอง", "เก็บตัวอยากตาย", "คิดอยากฆ่าตัวตายทำร้ายตนเอง"],
     # injuries
-    "injury_trauma": ["กระแทก", "บาดเจ็บ", "animalbite", "รถล้ม"],
+    "injury_trauma": ["กระแทก", "บาดเจ็บ", "animalbite", "รถล้ม","animalrelatedinjury", "historyoftrauma"],
+    "bone_pain": ["ปวดกระดูก"],    
+    # women’s health
+    "vaginal_discharge": ["ตกขาวผิดปกติ"],
+    "hot_flashes": ["ร้อนวูบวาบ"],
+    # neuro/cardiac-like
+    "syncope": ["วูบ", "fainted"],
+    # hair
+    "hair_loss": ["ผมร่วง"],
+    "history_hypertension": ["ประวัติความดันสูง", "historyofhypertension(highbloodpressure)"],
+    "history_gastritis": ["ประวัติโรคกระเพาะ"],
+    "history_hyperlipidemia": ["ประวัติไขมันสูง"],
+    "axillary_mass": ["axillarymass", "ก้อนบริเวณหู"],
+    "floaters": ["จุดดำลอยในตา"],
+    "imbalance": ["unsteady,lossofbalance", "เดินเซทรงตัวไม่ได้"],
+    "dysarthria": ["slurredspeech"],
+    "menorrhagia": ["ประจำเดือนมากกว่าปกติ"],
+    "oligomenorrhea": ["ประจำเดือนมาน้อย,ประจำเดือนขาด"],
+    "facial_pain": ["ปวดบริเวณใบหน้า"]
 }
 
-# Pre-compile regex patterns.
-# For each synonym we match both the normal string and "no-space" version (to catch e.g. nasalcongestion).
 def make_pattern(phrase):
     p = re.escape(phrase)
     p_ns = re.escape(nospace(phrase))
@@ -148,76 +164,25 @@ def normalize_symptom_list(items):
         out |= normalize_one(str(x))
     return sorted(out)
 
-split_column = df['search_term'].str.split(',', expand=True)
-split_column[split_column.columns] = split_column[split_column.columns].applymap(lambda x: x.replace(" ", "") if isinstance(x, str) else x)
-split_column = split_column.applymap(lambda x: np.nan if x == '' else x)
-split_column[split_column.columns] = split_column[split_column.columns].applymap(lambda lst: normalize_symptom_list(lst if isinstance(lst, (list, tuple)) else [lst]))
-split_column = split_column.applymap(lambda x: x[0] if isinstance(x, list) and len(x) > 0 else "")
+def categorize_duration(s: str):
+    if not isinstance(s, str):
+        return "unknown"
+    s = s.lower().strip()
 
-df['symptoms'] = split_column.values.tolist()
-df['symptoms'] = df['symptoms'].apply(lambda x: [i for i in x if pd.notna(i) and str(i).strip() != ""])
-df['ctx_items'] = df.apply(lambda r: [f"GENDER={r['gender'].lower()}", f"AGE={bin_age(r['age'])}"], axis=1)
-df['basket'] = df['ctx_items'] + df['symptoms']
+    # จัดการกรณีพิเศษ (ภาษาอังกฤษ)
+    if "hour" in s or "24" in s or "น้อยกว่า 1 วัน" in s or "ไม่เกิน 1 วัน" in s or "less then a day" in s:
+        return "<1 day"
+    if re.search(r"less\s*than\s*a\s*day?", s):
+        return "<1 day"
+    if re.search(r"1[-–]3\s*วัน|1-3 days?|1[-–]3days?|4[-–]7\s*วัน|3-7\s*วัน|ตั้งแต่ 1 วัน ถึง 1 สัปดาห์|น้อยกว่า 10 วัน|4[-–]7\s*days?|less than 10days|less\s*than\s*3\s*days?|1[-–]7\s*day?|less then a week?", s):
+        return "<1 week"
+    if re.search(r"1-3\s*สัปดาห์|ไม่เกิน 1 สัปดาห์|less than a week|8[-–]14\s*วัน|1-2\s*สัปดาห์|มากกว่า 7 วัน|1[-–]3\s*weeks?", s):
+        return "1-3 weeks"
+    if re.search(r"1\s*เดือน|1-3\s*เดือน|10\s*[-–]\s*90\s*วัน|3-8\s*สัปดาห์|3-8\s*weeks?|มากกว่า\s*8\s*สัปดาห์.*2\s*เดือน", s):
+        return "1-3 months"
+    if re.search(r"3-6\s*เดือน", s):
+        return "3-6 months"
+    if re.search(r"มากกว่า 6\s*เดือน|more than 6months", s):
+        return ">6 months"
 
-melt = df.explode('symptoms')
-melt['age_bin'] = melt['age'].apply(bin_age)
-
-# symptom universe
-symptoms = sorted({s for row in df['symptoms'] for s in row})
-idx = {s:i for i,s in enumerate(symptoms)}
-n = len(symptoms)
-
-# co-occurrence & frequency
-co = np.zeros((n,n), dtype=np.int32)
-freq = np.zeros(n, dtype=np.int32)
-for row in df['symptoms']:
-    ids = list({idx[s] for s in row if s in idx})
-    for i in ids: freq[i] += 1
-    for i in ids:
-        for j in ids:
-            if i!=j: co[i,j] += 1
-
-# Jaccard similarity
-jac = np.zeros((n,n), dtype=np.float32)
-for i in range(n):
-    for j in range(n):
-        if i==j: continue
-        denom = freq[i] + freq[j] - co[i,j]
-        if denom>0: jac[i,j] = co[i,j] / denom
-
-melt = melt.reset_index().drop_duplicates(['index','gender','age_bin','symptoms'])
-# demographic priors P(symptom | gender, age_bin)
-prior = (melt.groupby(['gender','age_bin','symptoms']).size().reset_index(name='n'))
-prior['p'] = prior.groupby(['gender','age_bin'])['n'].transform(lambda x: x / x.sum())
-prior = prior.drop(columns='n')
-
-def prior_vector(gender, age):
-    ab = bin_age(age)
-    sub = prior[(prior['gender']==gender) & (prior['age_bin']==ab)]
-    v = np.zeros(n, dtype=np.float32)
-    if not sub.empty:
-        for s, p in zip(sub['symptoms'], sub['p']):
-            if s in idx: v[idx[s]] = p
-    else:
-        # fallback to global marginal
-        glob = (melt.groupby('symptoms').size() / len(melt)).reset_index(name='p')
-        for s, p in zip(glob['symptoms'], glob['p']):
-            if s in idx: v[idx[s]] = p
-    return v
-
-def rec_itemknn(observed_symptoms, gender, age, k=5, alpha=0.7):
-    normalized_symptoms = normalize_symptom_list(observed_symptoms)
-    obs_ids = [idx[s] for s in normalized_symptoms if s in idx]
-    if not obs_ids:  # cold start: just return by prior
-        pv = prior_vector(gender, age)
-        order = pv.argsort()[::-1]
-        return [symptoms[i] for i in order][:k]
-
-    sim = jac[obs_ids].sum(axis=0)
-    sim[obs_ids] = 0  # don’t recommend what’s already present
-    pv = prior_vector(gender, age)
-    score = alpha*sim + (1-alpha)*pv
-
-    order = score.argsort()[::-1]
-    recs = [symptoms[i] for i in order if symptoms[i] not in normalized_symptoms][:k]
-    return recs
+    return "no specific"

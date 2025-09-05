@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from recommend_system import rec_itemknn
+from Main_recommend_system import rec_itemknn
 
 def main():
     root = tk.Tk()
