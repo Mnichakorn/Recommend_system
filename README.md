@@ -1,5 +1,5 @@
 # Agnos_recommendation_system
-This system contains 2 parts
+The system contains 2 parts
 1. Main: The system recommend Top 5 of symptoms that the input contains gender, age, and symptoms
    The code:
    - Main_process_data.py: file .py for managing and processing the historical data, and save data to 'assets/Main_process_profile.csv'
