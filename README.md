@@ -9,4 +9,9 @@ This system contains 2 parts
    The code:
    - Addition_process_data.py: file .py for managing and processing the historical data, and save data to 'assets/Addition_process_profile.csv'
    - Addition_recomens_system.py: file .py for creating logic to recommend symptoms, entering inputs(gender, age, symptoms, duration, and previous treatment) and showing output(Top 5 of symptoms)
-### Run code
+### Run code for recommendation system
+- For main part: run 'python Main_symptom_recommender_screen.py'
+- For addition part: run 'python Addition_recomens_system.py'
+
+### Here is Document
+>> https://docs.google.com/presentation/d/1GWaEBczhTfPEXU4H_rzeSkJRGpcZplAej9UqB27ltYQ/edit?usp=sharing
