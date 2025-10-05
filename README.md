@@ -1,4 +1,4 @@
-# Agnos_recommender_system
+# Recommend system
 The system contains 2 parts:
 1. **Main**: The system recommend Top 5 of symptoms that the input contains gender, age, and symptoms
    The code:
